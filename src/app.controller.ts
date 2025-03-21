@@ -19,10 +19,25 @@ export class AppController {
   @Post('api/v1/binary/slow')
   uploadBinary(@Req() req: RawBodyRequest<Request>): string {
 
-    fs.open(path.join(cwd(), 'tmp', randomUUID()) , 'ax', function (err, f) {
-      console.log(err);
-      console.log('Saved!');
-    });
+    console.log(req.rawBody);
+    // fs.open(path.join(cwd(), 'tmp', randomUUID()) , 'ax', (err, f) => {
+    //   // TODO: replace with error log later
+    //   if (err) throw err;
+    //   fs.write(f, req.rawBody as Buffer, (err, written) => {
+    //     // TODO: replace with error log later
+    //     if (err) throw err;
+
+    //     console.log(`Written ${written} bytes to file.`);
+
+    //     fs.close(f, (err) => {
+    //       // TODO: replace with error log later
+    //       if (err) throw err;
+    //       console.log('File closed.');
+    //     });
+    //   });
+    //   console.log(err);
+    //   console.log('Saved!');
+    // });
     return 'test binary';
   }
 }
