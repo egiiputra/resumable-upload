@@ -1,11 +1,17 @@
 import { cwd } from 'process';
 import * as path from 'path';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 
-import { Controller, Get, Post, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Headers,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AppService } from './app.service';
-import { diskStorage } from 'multer';
 
 @Controller()
 export class AppController {
@@ -17,17 +23,20 @@ export class AppController {
   }
 
   @Post('api/v1/form-upload')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: path.join(cwd(), 'uploads'),
-        filename: (req, file, cb) => {
-          cb(null, randomUUID() + path.extname(file.originalname));
-        },
-      }),
-    }),
-  )
-  uploadBinary(): string {
+  @UseInterceptors(FileInterceptor('file'))
+  uploadBinary(
+    @UploadedFile() file: Express.Multer.File,
+    @Headers('X-Checksum') checksum: string,
+  ): string {
+    const hash = createHash('md5');
+
+    hash.update(file.buffer);
+    if (checksum != hash.copy().digest('hex')) {
+      // TODO: Give bad request response status
+      return 'file corrupt';
+    }
+    // TODO: Store file to disk and give unique name
+
     return 'upload file successfully';
   }
 }
