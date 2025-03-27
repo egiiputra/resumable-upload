@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import * as express from 'express';
 import * as path from 'path';
@@ -13,6 +14,14 @@ async function bootstrap() {
   app.enableVersioning({
     type: VersioningType.URI,
   });
+
+  const config = new DocumentBuilder()
+    .setTitle('Resumable file upload')
+    .setDescription('A simple resumable file upload API that built with NestJS framework')
+    .setVersion('1.0')
+    .build();
+  const documentFactory = () => SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('docs', app, documentFactory);
 
   await app.listen(process.env.PORT ?? 3000);
 }
