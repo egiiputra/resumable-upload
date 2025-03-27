@@ -16,7 +16,7 @@ import { Response } from 'express';
 
 @Controller({
   path: 'form-upload',
-  version: '1'
+  version: '1',
 })
 export class FormUploadController {
   @Post()
@@ -74,5 +74,4 @@ export class FormUploadController {
       });
     });
   }
-
 }
