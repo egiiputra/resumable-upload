@@ -26,9 +26,11 @@ export class FilesController {
     @Headers('Upload-Metadata') uploadMetadata: string,
   ) {
     //console.log(contentType)
+    console.log(uploadMetadata)
     console.log(req.rawBody)
-    this.filesService.parseMetadata(uploadMetadata)
+    const metadataObj = this.filesService.parseMetadata(uploadMetadata)
 
+    return metadataObj;
     // TODO: Initiates a new file upload. The client will send the metadata of the file to be uploaded, and the server will respond with the location where to upload the file
   }
 
