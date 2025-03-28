@@ -1,3 +1,4 @@
+import { FilesService } from './files.service';
 import {
   Controller,
   Post,
@@ -6,15 +7,28 @@ import {
   Delete,
   Options,
   Param,
+  Req,
+  RawBodyRequest,
+  Headers,
 } from '@nestjs/common';
 
+// import * as bodyParser from 'body-parser';
 @Controller({
   path: 'files',
   version: '1',
 })
 export class FilesController {
+  constructor(private readonly filesService: FilesService) {}
+
   @Post()
-  initiateUpload() {
+  createUpload(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers('Upload-Metadata') uploadMetadata: string,
+  ) {
+    //console.log(contentType)
+    console.log(req.rawBody)
+    this.filesService.parseMetadata(uploadMetadata)
+
     // TODO: Initiates a new file upload. The client will send the metadata of the file to be uploaded, and the server will respond with the location where to upload the file
   }
 

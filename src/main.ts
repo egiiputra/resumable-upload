@@ -8,9 +8,15 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { VersioningType } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
 
+  app.useBodyParser('raw', {
+    type: req => true, // Apply to *all* requests, regardless of content type.
+    limit: '10mb'
+  });
+  app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
   app.enableVersioning({
     type: VersioningType.URI,
   });
