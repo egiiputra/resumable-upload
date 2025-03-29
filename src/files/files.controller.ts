@@ -10,9 +10,11 @@ import {
   Req,
   RawBodyRequest,
   Headers,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 
-// import * as bodyParser from 'body-parser';
+
 @Controller({
   path: 'files',
   version: '1',
@@ -23,15 +25,20 @@ export class FilesController {
   @Post()
   createUpload(
     @Req() req: RawBodyRequest<Request>,
-    @Headers('Upload-Metadata') uploadMetadata: string,
+    @Headers() headers: Record<string, string>,
+    @Res() res: Response,
   ) {
-    //console.log(contentType)
-    console.log(uploadMetadata)
-    console.log(req.rawBody)
-    const metadataObj = this.filesService.parseMetadata(uploadMetadata)
-
-    return metadataObj;
     // TODO: Initiates a new file upload. The client will send the metadata of the file to be uploaded, and the server will respond with the location where to upload the file
+    const metadataObj = this.filesService.parseMetadata(headers['upload-metadata'])
+    const totalSize = parseInt(headers['upload-length'])
+
+    if (Number.isNaN(totalSize)) {
+      res.status(400).json({
+        message: "Invalid Upload-Length header"
+      })
+      return
+    }
+    return metadataObj;
   }
 
   @Head(':id')
