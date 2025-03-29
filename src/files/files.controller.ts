@@ -1,3 +1,4 @@
+import * as process from 'process';
 import { FilesService } from './files.service';
 import {
   Controller,
@@ -13,7 +14,6 @@ import {
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
-
 
 @Controller({
   path: 'files',
@@ -42,6 +42,13 @@ export class FilesController {
       if (Number.isNaN(totalSize)) {
         res.status(400).json({
           message: 'invalid Upload-Length header'
+        })
+        return
+      }
+
+      if (totalSize > process.env.MAX_SIZE_UPLOAD) {
+        res.status(413).json({
+          message: 'upload length exceeds the maximum size'
         })
         return
       }
