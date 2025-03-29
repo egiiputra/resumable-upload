@@ -28,16 +28,26 @@ export class FilesController {
     @Headers() headers: Record<string, string>,
     @Res() res: Response,
   ) {
+    const uploadDeferLength: string = headers['upload-defer-length']
+    if (uploadDeferLength != '' && uploadDeferLength != '1') {
+      res.status(400).json({
+        message: 'invalid Upload-Defer-Length header'
+      })
+    }
+
+    const isDeferLength: boolean = (uploadDeferLength == '1')
+    if (!isDeferLength) {
+      const totalSize = parseInt(headers['upload-length'])
+
+      if (Number.isNaN(totalSize)) {
+        res.status(400).json({
+          message: 'invalid Upload-Length header'
+        })
+        return
+      }
+    }
     // TODO: Initiates a new file upload. The client will send the metadata of the file to be uploaded, and the server will respond with the location where to upload the file
     const metadataObj = this.filesService.parseMetadata(headers['upload-metadata'])
-    const totalSize = parseInt(headers['upload-length'])
-
-    if (Number.isNaN(totalSize)) {
-      res.status(400).json({
-        message: "Invalid Upload-Length header"
-      })
-      return
-    }
     return metadataObj;
   }
 
