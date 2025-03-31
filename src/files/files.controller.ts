@@ -1,5 +1,6 @@
 import * as process from 'process';
 import { FilesService } from './files.service';
+import { randomUUID } from 'crypto';
 import {
   Controller,
   Post,
@@ -15,6 +16,8 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 
+const MAX_SIZE_UPLOAD = parseInt(process.env.MAX_SIZE_UPLOAD ?? '100') * 1024 * 1024
+
 @Controller({
   path: 'files',
   version: '1',
@@ -28,13 +31,16 @@ export class FilesController {
     @Headers() headers: Record<string, string>,
     @Res() res: Response,
   ) {
-    const uploadDeferLength: string = headers['upload-defer-length']
+    // TODO: Initiates a new file upload. The client will send the metadata of the file to be uploaded, and the server will respond with the location where to upload the file
+    const uploadDeferLength: string = headers['upload-defer-length'] ?? ''
     if (uploadDeferLength != '' && uploadDeferLength != '1') {
       res.status(400).json({
         message: 'invalid Upload-Defer-Length header'
       })
+      return
     }
 
+    const fileMetadata = this.filesService.parseMetadata(headers['upload-metadata'])
     const isDeferLength: boolean = (uploadDeferLength == '1')
     if (!isDeferLength) {
       const totalSize = parseInt(headers['upload-length'])
@@ -46,16 +52,18 @@ export class FilesController {
         return
       }
 
-      if (totalSize > process.env.MAX_SIZE_UPLOAD) {
+      if (totalSize > MAX_SIZE_UPLOAD) {
         res.status(413).json({
           message: 'upload length exceeds the maximum size'
         })
         return
       }
+      fileMetadata.totalSize = totalSize;
     }
-    // TODO: Initiates a new file upload. The client will send the metadata of the file to be uploaded, and the server will respond with the location where to upload the file
-    const metadataObj = this.filesService.parseMetadata(headers['upload-metadata'])
-    return metadataObj;
+
+    res.status(201).set({
+      'Location': `/v1/files/${randomUUID()}`
+    }).send()
   }
 
   @Head(':id')

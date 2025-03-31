@@ -3,7 +3,7 @@ import { Buffer } from 'buffer';
 
 @Injectable()
 export class FilesService {
-  parseMetadata(metadata: string): object {
+  parseMetadata(metadata: string): Record<string, string | number> {
     let metadataObj = {};
     const data = metadata.split(',');
     console.log(data)
