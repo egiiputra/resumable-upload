@@ -130,8 +130,14 @@ export class FilesController {
   }
 
   @Patch(':id')
-  uploadChunk(@Param('id') id: string) {
+  uploadChunk(@Param('id') id: string, @Headers() headers: Record<string, string>, @Res() res: Response) {
     // TODO: Uploads a chunk of the file. The client will send a chunk of the file to the server, and the server will append the chunk to the file.
+    console.log(headers)
+    if (headers['Content-Type'] != 'application/offset+octet-stream') {
+      res.status(415).send({message: 'content must an octet stream'})
+    }
+
+
   }
 
   @Delete(':id')
