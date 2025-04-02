@@ -1,6 +1,9 @@
 import * as process from 'process';
+import * as path from 'path';
 import { FilesService } from './files.service';
 import { randomUUID } from 'crypto';
+import * as fs from 'fs';
+
 import {
   Controller,
   Post,
@@ -61,9 +64,43 @@ export class FilesController {
       fileMetadata.totalSize = totalSize;
     }
 
-    res.status(201).set({
-      'Location': `/v1/files/${randomUUID()}`
-    }).send()
+    const filename = randomUUID();
+    const filepath = path.join(
+      process.cwd(),
+      'uploads',
+      `${filename}.metadata.json`,
+    );
+
+    fs.open(filepath, 'ax', (err, fd) => {
+      if (err) {
+        res.status(500).json({
+          message: 'Creating file metadata failed',
+        });
+        return;
+      }
+
+      fs.write(fd, JSON.stringify(fileMetadata), (err) => {
+        if (err) {
+          res.status(500).json({
+            message: 'Error writing to file',
+          });
+          return;
+        }
+
+        fs.close(fd, (err) => {
+          if (err) {
+            res.status(500).json({
+              message: 'Error closing file',
+            });
+            return;
+          }
+          console.log(fileMetadata)
+          res.status(201).set({
+            'Location': `/v1/files/${filename}`
+          }).send()
+        });
+      });
+    });
   }
 
   @Head(':id')
