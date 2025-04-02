@@ -6,7 +6,6 @@ export class FilesService {
   parseMetadata(metadata: string): Record<string, string | number> {
     let metadataObj = {};
     const data = metadata.split(',');
-    console.log(data)
     for (const kv of data) {
       if (kv == '') {
         continue;
