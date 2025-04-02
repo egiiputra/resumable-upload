@@ -119,7 +119,13 @@ export class FilesController {
         return;
       }
 
-      console.log(JSON.parse(data))
+      const metadata = JSON.parse(data)
+
+      let headers: Record<string, string> = {"Cache-Control": "no-store", "Upload-Offset": metadata.uploadedSize.toString() }
+      if (metadata.isDeferLength == '') {
+        headers['Upload-Length'] = metadata.totalSize
+      }
+      res.status(204).set(headers).send()
     });
   }
 
