@@ -135,7 +135,19 @@ export class FilesController {
     console.log(headers)
     if (headers['Content-Type'] != 'application/offset+octet-stream') {
       res.status(415).send({message: 'content must an octet stream'})
+      return
     }
+    const metadataPath = path.join(
+      process.cwd(),
+      'uploads',
+      `${id}.metadata.json`,
+    )
+    fs.readFile(metadataPath, 'utf8', (err, data) => {
+      if (err) {
+        res.status(404).send({ message: 'file not found/not initiated'});
+        return;
+      }
+    });
 
 
   }
