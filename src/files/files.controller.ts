@@ -44,10 +44,11 @@ export class FilesController {
     }
 
     const fileMetadata = this.filesService.parseMetadata(headers['upload-metadata'])
-    const isDeferLength: boolean = (uploadDeferLength == '1')
-    if (!isDeferLength) {
-      const totalSize = parseInt(headers['upload-length'])
+    fileMetadata.uploadedSize = 0
 
+    fileMetadata.isDeferLength = (uploadDeferLength == '1') ? '1':''
+    if (fileMetadata.isDeferLength == '') {
+      const totalSize = parseInt(headers['upload-length'])
       if (Number.isNaN(totalSize)) {
         res.status(400).json({
           message: 'invalid Upload-Length header'
@@ -104,8 +105,22 @@ export class FilesController {
   }
 
   @Head(':id')
-  getMetadata(@Param('id') id: string) {
+  getMetadata(@Param('id') id: string, @Res() res: Response) {
     // TODO: Retrieves the metadata of the file by ID. This API will be used to check the status and progress of the upload. Client can use this API to see how much of the file has been uploaded and where to resume the upload
+    const metadataPath = path.join(
+      process.cwd(),
+      'uploads',
+      `${id}.metadata.json`,
+    )
+    console.log(metadataPath)
+    fs.readFile(metadataPath, 'utf8', (err, data) => {
+      if (err) {
+        res.status(404).send();
+        return;
+      }
+
+      console.log(JSON.parse(data))
+    });
   }
 
   @Patch(':id')
