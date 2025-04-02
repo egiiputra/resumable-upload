@@ -13,9 +13,7 @@ export class FilesService {
       }
 
       try {
-        console.log('kv', kv);
         let [key, value] = kv.split(' ');
-        console.log('value', value)
 
         // Create a buffer from the string
         let bufferObj = Buffer.from(value, "base64");
