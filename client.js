@@ -9,57 +9,36 @@ args
 const flags = args.parse(process.argv)
 console.log(flags)
 
-fs.open(filepath, 'ax', (err, fd) => {
+fs.open(flags.id, 'ax', (err, fd) => {
   if (err) {
-    res.status(500).json({
-      message: 'Creating file metadata failed',
-    });
-    return;
+    console.log(err)
   }
 
-  fs.write(fd, JSON.stringify(fileMetadata), (err) => {
+  const buffer = Buffer.alloc(length); // Allocate a 10-byte buffer
+
+  fs.read(fd, buffer, 0, flags.length, offset, (err, bytesRead, buffer) => {
     if (err) {
-      res.status(500).json({
-        message: 'Error writing to file',
-      });
+      console.error('Error reading file:', err);
       return;
     }
 
-    fs.close(fd, (err) => {
-      if (err) {
-        res.status(500).json({
-          message: 'Error closing file',
-        });
-        return;
-      }
-      console.log(fileMetadata)
-      res.status(201).set({
-        'Location': `/v1/files/${filename}`
-      }).send()
-    });
+    console.log(`Bytes read: ${bytesRead}`);
+    console.log(`Buffer content: ${buf.toString()}`);
+
+    (async () => {
+      const response = await fetch(`http://localhost:3000/v1/files/${flags.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Length": chunk.size,
+          "Content-Type": "application/offset+octet-stream"
+        },
+        body: chunk
+      });
+      console.log(response)
+
+      fs.close(fd, (err) => {
+          if (err) console.error('Error closing file:', err);
+      });
+    })()
   });
 });
-
-const chunk = file.slice(start, end);
-
-const response = await fetch(`http://localhost:3000/v1/files/${flags.id}`, {
-    method: "PATCH",
-    headers: {
-        "Content-Length": chunk.size,
-        "Content-Type": "application/octet-stream"
-    },
-    body: chunk
-});
-
-const result = await response.json();
-return result.uploaded; // Next byte position to send
-}
-
-async function uploadFile(file, fileID, chunkSize = 1024 * 1024) {
-    let start = 0;
-    while (start < file.size) {
-        const end = Math.min(start + chunkSize, file.size);
-        start = await uploadChunk(file, fileID, start, end);
-    }
-    console.log("Upload complete!");
-}
