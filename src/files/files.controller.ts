@@ -95,7 +95,6 @@ export class FilesController {
             });
             return;
           }
-          console.log(fileMetadata)
           res.status(201).set({
             'Location': `/v1/files/${filename}`
           }).send()
@@ -112,7 +111,6 @@ export class FilesController {
       'uploads',
       `${id}.metadata.json`,
     )
-    console.log(metadataPath)
     fs.readFile(metadataPath, 'utf8', (err, data) => {
       if (err) {
         res.status(404).send();
@@ -130,9 +128,11 @@ export class FilesController {
   }
 
   @Patch(':id')
-  uploadChunk(@Param('id') id: string, @Headers() headers: Record<string, string>, @Res() res: Response) {
+  uploadChunk(@Param('id') id: string, @Req() req: RawBodyRequest<Request>,  @Headers() headers: Record<string, string>, @Res() res: Response) {
     // TODO: Uploads a chunk of the file. The client will send a chunk of the file to the server, and the server will append the chunk to the file.
     console.log(headers)
+    const buffer = req.rawBody
+    console.log(buffer)
     if (headers['Content-Type'] != 'application/offset+octet-stream') {
       res.status(415).send({message: 'content must an octet stream'})
       return
@@ -142,12 +142,25 @@ export class FilesController {
       'uploads',
       `${id}.metadata.json`,
     )
-    fs.readFile(metadataPath, 'utf8', (err, data) => {
-      if (err) {
-        res.status(404).send({ message: 'file not found/not initiated'});
-        return;
-      }
-    });
+
+    if (buffer === undefined) {
+      res.status(400).send({ message: 'request body is empty'})
+      return
+    }
+
+     const readStream = fs.createReadStream(req.rawBody)
+
+    // readStream.on('data', chunk => {
+    //   console.log(chunk)
+    // })
+
+    // fs.readFile(metadataPath, 'utf8', (err, data) => {
+    //   if (err) {
+    //     res.status(404).send({ message: 'file not found/not initiated'});
+    //     return;
+    //   }
+    // });
+
 
 
   }
