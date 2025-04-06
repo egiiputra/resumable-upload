@@ -1,5 +1,6 @@
+
 (async () => {
-  
+  const { exit } = require('process')
   const args = require('args')
   const fs = require('fs')
   const crypto = require('crypto')
@@ -36,57 +37,26 @@
       "Upload-Metadata": `filename ${encFilename},content-type ${encType},checksum ${encChecksum}`,
     },
   });
+
   console.log(response)
+  // Stop if create upload failed
+  if (response.status != 201) {
+    throw Error('Create upload failed')
+  }
+
+  console.log(response.headers)
+
+  let start_buf = 0
+  for (let i = 0; i < Math.ceil(buffer.length / flags.length); i++) {
+    const response = await fetch(`http://localhost:3000/v1/files/${flags.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Length": flags.length,
+        "Content-Type": "application/offset+octet-stream"
+      },
+      body: buffer.subarray(start_buf, start_buf + flags.length)
+    });
+    console.log(response)
+    start_buf = response.headers['Upload-Offset']
+  }
 })()
-
-
-// fs.open(flags.path, 'r', (err, fd) => {
-//   if (err) {
-//     console.log(err)
-//   }
-
-//   const res = fs.readSync(fd)
-//   console.log('res', res)
-  // fs.readFile('file.pdf', function(err, data) {
-  //   var checksum = generateChecksum(data);
-  //   console.log(checksum);
-  // });
-  
-  // function generateChecksum(str, algorithm, encoding) {
-  //     return crypto
-  //         .createHash(algorithm || 'md5')
-  //         .update(str, 'utf8')
-  //         .digest(encoding || 'hex');
-  // }
-  
-
-  // Get file id and send chunk of file iteratively
-
-  // const buffer = Buffer.alloc(flags.length); // Allocate a 10-byte buffer
-
-  // fs.read(fd, buffer, 0, flags.length, offset, (err, bytesRead, buffer) => {
-  //   if (err) {
-  //     console.error('Error reading file:', err);
-  //     return;
-  //   }
-
-  //   console.log(`Bytes read: ${bytesRead}`);
-  //   console.log(`Buffer content: ${buf.toString()}`);
-
-  //   (async () => {
-  //     const response = await fetch(`http://localhost:3000/v1/files/${flags.id}`, {
-  //       method: "PATCH",
-  //       headers: {
-  //         "Content-Length": flags.length,
-  //         "Content-Type": "application/offset+octet-stream"
-  //       },
-  //       body: buffer
-  //     });
-  //     console.log(response)
-  //   })()
-
-  //   fs.close(fd, (err) => {
-  //       if (err) console.error('Error closing file:', err);
-  //   });
-  // });
-// });
