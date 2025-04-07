@@ -1,6 +1,5 @@
 
 (async () => {
-  const { exit } = require('process')
   const args = require('args')
   const fs = require('fs')
   const crypto = require('crypto')
@@ -9,13 +8,14 @@
 
   args
     .option('path', 'The path of file that you want to upload')
-    .option('length', 'The length bytes of file that you want to upload', 1024 * 1024)
+    .option('length', 'The length bytes of file that you want to upload', 1024)
     
   const flags = args.parse(process.argv)
   const filename = path.basename(flags.path)
     
   // Create upload with POST method (send metadata)
   const buffer = fs.readFileSync(flags.path)
+  console.log('file size ', buffer.length)
   const { mime:type } = await fileType.fileTypeFromBuffer(buffer)
   
   
@@ -45,18 +45,24 @@
   }
 
   console.log(response.headers)
+  const location = response.headers.get('location')
+  console.log(location)
 
   let start_buf = 0
+  // console.log()
+  // 
   for (let i = 0; i < Math.ceil(buffer.length / flags.length); i++) {
-    const response = await fetch(`http://localhost:3000/v1/files/${flags.id}`, {
+    const chunk = buffer.subarray(start_buf, start_buf + flags.length)
+    console.log(chunk)
+    const response = await fetch(`http://localhost:3000${location}`, {
       method: "PATCH",
       headers: {
-        "Content-Length": flags.length,
+        "Content-Length": chunk.length,
         "Content-Type": "application/offset+octet-stream"
       },
-      body: buffer.subarray(start_buf, start_buf + flags.length)
+      body: chunk
     });
     console.log(response)
-    start_buf = response.headers['Upload-Offset']
+    start_buf = parseInt(response.headers.get('upload-offset'))
   }
 })()
