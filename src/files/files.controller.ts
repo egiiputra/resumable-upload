@@ -130,28 +130,56 @@ export class FilesController {
   @Patch(':id')
   uploadChunk(@Param('id') id: string, @Req() req: RawBodyRequest<Request>,  @Headers() headers: Record<string, string>, @Res() res: Response) {
     // TODO: Uploads a chunk of the file. The client will send a chunk of the file to the server, and the server will append the chunk to the file.
-    console.log(headers)
-    const buffer = req.rawBody
-    console.log(buffer)
-    if (headers['Content-Type'] != 'application/offset+octet-stream') {
+    if (headers['content-type'] != 'application/offset+octet-stream') {
       res.status(415).send({message: 'content must an octet stream'})
       return
     }
-    const metadataPath = path.join(
-      process.cwd(),
-      'uploads',
-      `${id}.metadata.json`,
-    )
+    
+    const buffer = req.rawBody
 
     if (buffer === undefined) {
       res.status(400).send({ message: 'request body is empty'})
       return
     }
 
-     const readStream = fs.createReadStream(req.rawBody)
+    const metadataPath = path.join(process.cwd(), 'uploads', `${id}.metadata.json`)
+    fs.readFile(metadataPath, 'utf-8', (err, data) => {
+      if (err) {
+        res.status(404).send({ message: 'Upload ID not found' })
+        return
+      }
+      const metadata = JSON.parse(data)
 
+      fs.open(path.join(process.cwd(), 'uploads', metadata.filename), 'a', (err, fd) => {
+        if (err) {
+          res.status(500).send({ message: 'Open file error'})
+          return
+        }
+        fs.write(fd, buffer, 0, buffer.length, (err, bytesWritten, buff) => {
+          if (err) {
+            res.status(500).send({ message: 'Write file error'})
+            return  
+          }
+          metadata.uploadedSize += bytesWritten
+          fs.writeFileSync(metadataPath, JSON.stringify(metadata))
+          fs.close(fd, (err) => {
+            if (err) {
+              res.status(500).send({ message: 'Close file error'})
+              return
+            }
+            res.status(204).set({ 'Upload-Offset': metadata.uploadedSize }).send()
+            return
+          })
+        })
+      })
+    });
+
+
+
+
+    //  const readStream = fs.createReadStream(buffer)
+    
     // readStream.on('data', chunk => {
-    //   console.log(chunk)
     // })
 
     // fs.readFile(metadataPath, 'utf8', (err, data) => {

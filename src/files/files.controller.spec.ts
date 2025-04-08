@@ -19,16 +19,16 @@ describe('FilesController', () => {
   describe('module definition', () => {
     it('provider should be defined', () => {
       expect(provider).toBeDefined();
-    );
+    });
 
     it('controller should be defined', () => {
       expect(controller).toBeDefined();
     });
-  })
+  });
 
-  desribe('test files service' () => {
+  desribe('test files service', () => {
     it('pass invalid metadata', () => {
-      expect(() => provider.parseMetadata())
-    })
-  })
+      expect(() => provider.parseMetadata());
+    });
+  });
 });

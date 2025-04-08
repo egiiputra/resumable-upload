@@ -13,8 +13,8 @@ async function bootstrap() {
   });
 
   app.useBodyParser('raw', {
-    type: req => true, // Apply to *all* requests, regardless of content type.
-    limit: '10mb'
+    type: (req) => true, // Apply to *all* requests, regardless of content type.
+    limit: '10mb',
   });
   app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
   app.enableVersioning({
@@ -23,7 +23,9 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Resumable file upload')
-    .setDescription('A simple resumable file upload API that built with NestJS framework')
+    .setDescription(
+      'A simple resumable file upload API that built with NestJS framework',
+    )
     .setVersion('1.0')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);

@@ -4,7 +4,7 @@ import { Buffer } from 'buffer';
 @Injectable()
 export class FilesService {
   parseMetadata(metadata: string): Record<string, string | number> {
-    let metadataObj = {};
+    const metadataObj = {};
     const data = metadata.split(',');
     for (const kv of data) {
       if (kv == '') {
@@ -12,16 +12,16 @@ export class FilesService {
       }
 
       try {
-        let [key, value] = kv.split(' ');
+        const [key, value] = kv.split(' ');
 
         // Create a buffer from the string
-        let bufferObj = Buffer.from(value, "base64");
+        const bufferObj = Buffer.from(value, 'base64');
 
         // Encode the Buffer as a utf8 string
-        let decodedString = bufferObj.toString("utf8");
+        const decodedString = bufferObj.toString('utf8');
         metadataObj[key] = decodedString;
       } catch (e) {
-        throw new Error('Invalid metadata')
+        throw new Error('Invalid metadata');
       }
     }
 
