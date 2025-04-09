@@ -191,7 +191,8 @@ export class FilesController {
   }
 
   @Options()
-  getMethodOptions() {
+  getMethodOptions(@Res() res: Response) {
     // TODO:Retrieves the server’s capabilities. The client can query the server to determine which extensions are supported by the server
+    res.status(204).set({ Allow: 'OPTIONS, HEAD, POST, PATCH' }).send()
   }
 }
