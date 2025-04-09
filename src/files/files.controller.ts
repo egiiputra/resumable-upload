@@ -30,7 +30,6 @@ export class FilesController {
 
   @Post()
   createUpload(
-    @Req() req: RawBodyRequest<Request>,
     @Headers() headers: Record<string, string>,
     @Res() res: Response,
   ) {
@@ -173,29 +172,22 @@ export class FilesController {
         })
       })
     });
-
-
-
-
-    //  const readStream = fs.createReadStream(buffer)
-    
-    // readStream.on('data', chunk => {
-    // })
-
-    // fs.readFile(metadataPath, 'utf8', (err, data) => {
-    //   if (err) {
-    //     res.status(404).send({ message: 'file not found/not initiated'});
-    //     return;
-    //   }
-    // });
-
-
-
   }
 
   @Delete(':id')
-  cancelUpload(@Param('id') id: string) {
-    // TODO:Cancels the upload of the file. The server will delete the file and its metadata.
+  cancelUpload(@Param('id') id: string, @Res() res: Response) {
+    try {
+      const metadataPath = path.join(process.cwd(), 'uploads', `${id}.metadata.json`)
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, {encoding:'utf-8'}))
+      console.log(metadata)
+      fs.rmSync(path.join(process.cwd(), 'uploads', metadata.filename))
+      fs.rmSync(metadataPath)
+
+      res.status(204).send()
+    } catch {
+      res.status(400).send({ message: 'Upload ID not found'})
+
+    }
   }
 
   @Options()
