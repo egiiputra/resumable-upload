@@ -1,7 +1,7 @@
 import * as process from 'process';
 import * as path from 'path';
 import { FilesService } from './files.service';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import * as fs from 'fs';
 
 import {
@@ -122,6 +122,21 @@ export class FilesController {
       if (metadata.isDeferLength == '') {
         headers['Upload-Length'] = metadata.totalSize
       }
+
+      if (metadata.uploadedSize < metadata.totalSize) {
+        res.status(204).set(headers).send()
+        return
+      }
+
+      const hash = createHash('md5')
+
+      const buffer = fs.readFileSync(path.join(process.cwd(), 'uploads', metadata.filename))
+      hash.update(buffer)
+      if (metadata.checksum != hash.copy().digest('hex')) {
+        res.status(204).set(headers).send()
+        return
+      }
+      headers['Is-Completed'] = '1'
       res.status(204).set(headers).send()
     });
   }
