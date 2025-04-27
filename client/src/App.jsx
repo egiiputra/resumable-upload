@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Upload } from 'lucide-react'
 import './App.css'
+import * as process from 'process'
+import SparkMD5 from 'spark-md5';
 
 function App() {
   const [selectedFile, setSelectedFile] = useState(null)
@@ -15,13 +17,57 @@ function App() {
     }
   }
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile) return
     
     setUploading(true)
     console.log(selectedFile)
-    // Simulate upload progress
+    console.log(import.meta.env)
+    
+    // send file metadata
+    const encFilename = window.btoa(selectedFile.name)
+    const encType = window.btoa(selectedFile.type)
+
+    // Inside your function:
+    const spark = new SparkMD5.ArrayBuffer()
+    // And in your reader onload:
+    spark.append(selectedFile)
+    // At the end:
+    const encChecksum = window.btoa(spark.end())
+
+    console.log(`${import.meta.env.API_HOST}:${import.meta.env.API_PORT}`)
+    const metadata = `filename ${encFilename},content-type ${encType},checksum ${encChecksum}`
+    console.log(metadata)
+    const response = await fetch(
+      `${import.meta.env.VITE_API_HOST}:${import.meta.env.VITE_API_PORT}/v1/files`, {
+        method: 'POST',
+        headers: {
+          'Upload-Metadata': metadata,
+          'Upload-Length': selectedFile.size
+        }
+      }
+    )
+
+    console.log(response)
+    if (response.status != 201) {
+      console.log('Initiate upload failed')
+    }
+
+    /*
+    const hash = crypto.createHash('md5')
+    
+// import * as crypto from 'crypto';
+    hash.update(selectedFile)
+    const checksum = hash.copy().digest('hex')
+    console.log(checksum)
+    const encFilename = Buffer.from(selectedFile.name).toString('base64')
+    const encChecksum = Buffer.from(checksum).toString('base64')
+    */
+    /*
     let currentProgress = 0
+    while (true) {
+    }
+
     let start = 0
     const interval = setInterval(() => {
       currentProgress += 5
@@ -33,6 +79,7 @@ function App() {
         setUploading(false)
       }
     }, 200)
+    */
   }
 
   return (
