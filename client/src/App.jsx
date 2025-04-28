@@ -1,45 +1,56 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Upload } from 'lucide-react'
 import './App.css'
-import * as process from 'process'
-import SparkMD5 from 'spark-md5';
+import { calculateMD5 } from './util.js'
+
+const host_url = `${import.meta.env.VITE_API_HOST}:${import.meta.env.VITE_API_PORT}`
 
 function App() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [progress, setProgress] = useState(0)
   const [uploading, setUploading] = useState(false)
+  const [uploadURL, setUploadURL] = useState('')
 
-  const handleFileChange = (event) => {
+  useEffect(() => {
+    // Only add the event listener if there's an active upload
+    if (uploading) {
+      const handleBeforeUnload = (e) => {
+        const confirmationMessage = "You have an upload in progress. Are you sure you want to leave?";
+        e.preventDefault();
+        e.returnValue = confirmationMessage;
+        return confirmationMessage;
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [uploading]);
+
+  const handleFileChange = async (event) => {
     const file = event.target.files[0]
     if (file) {
-      setSelectedFile(file)
+      await setSelectedFile(file)
       setProgress(0)
     }
   }
 
-  const handleUpload = async () => {
-    if (!selectedFile) return
-    
-    setUploading(true)
-    console.log(selectedFile)
-    console.log(import.meta.env)
-    
-    // send file metadata
+  const initiateUpload = async () => {
     const encFilename = window.btoa(selectedFile.name)
     const encType = window.btoa(selectedFile.type)
 
-    // Inside your function:
-    const spark = new SparkMD5.ArrayBuffer()
-    // And in your reader onload:
-    spark.append(selectedFile)
-    // At the end:
-    const encChecksum = window.btoa(spark.end())
+    const checkSum = await calculateMD5(selectedFile)
+    const encChecksum = window.btoa(checkSum)
 
-    console.log(`${import.meta.env.API_HOST}:${import.meta.env.API_PORT}`)
     const metadata = `filename ${encFilename},content-type ${encType},checksum ${encChecksum}`
     console.log(metadata)
+    console.log(selectedFile.size)
+
+    // Initiate upload
     const response = await fetch(
-      `${import.meta.env.VITE_API_HOST}:${import.meta.env.VITE_API_PORT}/v1/files`, {
+      `${host_url}/v1/files`, {
         method: 'POST',
         headers: {
           'Upload-Metadata': metadata,
@@ -52,34 +63,71 @@ function App() {
     if (response.status != 201) {
       console.log('Initiate upload failed')
     }
-
-    /*
-    const hash = crypto.createHash('md5')
     
-// import * as crypto from 'crypto';
-    hash.update(selectedFile)
-    const checksum = hash.copy().digest('hex')
-    console.log(checksum)
-    const encFilename = Buffer.from(selectedFile.name).toString('base64')
-    const encChecksum = Buffer.from(checksum).toString('base64')
-    */
-    /*
-    let currentProgress = 0
-    while (true) {
-    }
+    console.log(response.headers.get('Location'))
+    setUploadURL(response.headers.get('Location'))
 
-    let start = 0
-    const interval = setInterval(() => {
-      currentProgress += 5
-      console.log(selectedFile.slice(start * selectedFile.size / 100, (start+5) * selectedFile.size / 100))
-      setProgress(currentProgress)
-      
-      if (currentProgress >= 100) {
-        clearInterval(interval)
-        setUploading(false)
+    handleUpload(0, response.headers.get('Location'))
+  }
+
+  const resumeUpload = async () => {
+    const response = await fetch(
+      `${host_url}${uploadURL}`, {
+      method: "HEAD"
+    });
+
+    console.log(response.headers.get('Is-Completed'))
+    if (response.headers.get('Is-Completed')) {
+      return
+    }
+    console.log(response.headers.get('Upload-Offset'))
+    handleUpload(
+      response.headers.get('Upload-Offset'), 
+      uploadURL
+    )
+  }
+
+  const handleUpload = async (startBuf, uploadUrl) => {
+    if (!selectedFile) return
+    
+    // setUploading(true)
+    // console.log(uploadUrl)
+    console.log('start ', startBuf)
+    let isCompleted = false
+
+    // Upload chunk
+    const chunkSize = 1*1024*1024 // 5MB
+
+    let currentProgress = Math.round(startBuf/selectedFile.size)
+    while (!isCompleted) {
+      const chunk = selectedFile.slice(startBuf, startBuf + chunkSize)
+
+      try {
+        const response = await fetch(
+          `${host_url}${uploadUrl}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Length": chunk.length,
+            "Content-Type": "application/offset+octet-stream"
+          },
+          body: chunk
+        });
+        startBuf = parseInt(response.headers.get('upload-offset'))
+        console.log('chunk ', response.status)
+        currentProgress = Math.round((startBuf / selectedFile.size) * 100)
+        console.log(currentProgress)
+        setProgress(currentProgress)
+        if (startBuf == selectedFile.size) {
+          break
+        }
+      } catch (error) {
+        if (!navigator.online) {
+          setUploading(false)
+          console.log('Network unavailable')
+          break
+        }
       }
-    }, 200)
-    */
+    }
   }
 
   return (
@@ -105,15 +153,15 @@ function App() {
             </label>
             
             <button
-              onClick={handleUpload}
-              disabled={!selectedFile || uploading}
+              onClick={uploadURL == '' ? initiateUpload:resumeUpload}
+              disabled={!selectedFile}
               className={`px-4 py-2 rounded-md transition-colors ${
                 !selectedFile || uploading
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-green-600 hover:bg-green-700 text-white'
               }`}
             >
-              {uploading ? 'Uploading...' : 'Upload'}
+              {uploading ? 'Uploading...' : (progress==0 ? 'Upload': 'Resume')}
             </button>
           </div>
         </div>
@@ -137,36 +185,6 @@ function App() {
       </div>
     </div>
   )
-  {/*return (
-    <>
-      <div className='flex w-screen h-screen justify-center content-center'>
-        <div className='border border-black w-2/5 bg-white max-h-7/10'>
-          <h1 class="text-3xl font-bold text-black">
-            Your file name
-          </h1>
-        </div>
-      </div>
-      {/* <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p> */}
-  
 }
 
 export default App
