@@ -58,7 +58,6 @@ export class FilesController {
         });
         return;
       }
-      console.log(totalSize);
 
       const maxUpload =
         (this.configService.get<number>('MAX_SIZE_UPLOAD') ?? 1000) *
@@ -233,7 +232,6 @@ export class FilesController {
       const metadata = JSON.parse(
         fs.readFileSync(metadataPath, { encoding: 'utf-8' }),
       );
-      console.log(metadata);
       fs.rmSync(path.join(process.cwd(), 'uploads', metadata.filename));
       fs.rmSync(metadataPath);
 
