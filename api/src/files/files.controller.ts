@@ -3,6 +3,7 @@ import * as path from 'path';
 import { FilesService } from './files.service';
 import { randomUUID, createHash } from 'crypto';
 import * as fs from 'fs';
+import { DatabaseSync } from 'node:sqlite';
 
 import {
   Controller,
@@ -19,6 +20,19 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+
+const database = new DatabaseSync(path.join(process.cwd(), 'files.db'));
+
+// Execute SQL statements from strings.
+database.exec(`
+  CREATE TABLE IF NOT EXISTS files (
+    uuid CHAR(36) NOT NULL,
+    filename VARCHAR(50) NOT NULL,
+    type VARCHAR(25),
+    checksum CHAR(32) NOT NULL,
+    total_size BIGINT NOT NULL,
+    uploaded_size BIGINT NOT NULL)
+`);
 
 @Controller({
   path: 'files',
@@ -72,45 +86,19 @@ export class FilesController {
       fileMetadata.totalSize = totalSize;
     }
 
-    const filename = randomUUID();
-    const filepath = path.join(
-      process.cwd(),
-      'uploads',
-      `${filename}.metadata.json`,
-    );
+    const id = randomUUID();
 
-    fs.open(filepath, 'ax', (err, fd) => {
-      if (err) {
-        res.status(500).json({
-          message: 'Creating file metadata failed',
-        });
-        return;
-      }
+    const insert = database.prepare('INSERT INTO files VALUES (?, ?, ?, ?, ?, ?)')
 
-      fs.write(fd, JSON.stringify(fileMetadata), (err) => {
-        if (err) {
-          res.status(500).json({
-            message: 'Error writing to file',
-          });
-          return;
-        }
-
-        fs.close(fd, (err) => {
-          if (err) {
-            res.status(500).json({
-              message: 'Error closing file',
-            });
-            return;
-          }
-          res
-            .status(201)
-            .set({
-              Location: `/v1/files/${filename}`,
-            })
-            .send();
-        });
-      });
-    });
+    insert.run(
+      id, 
+      fileMetadata['filename'],
+      fileMetadata['content-type'],
+      fileMetadata['checksum'],
+      fileMetadata['totalSize'],
+      fileMetadata['uploadedSize']
+    )
+    res.status(201).set({ Location: `/v1/files/${id}`}).send();
   }
 
   @Head(':id')
