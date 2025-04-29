@@ -45,8 +45,6 @@ function App() {
     const encChecksum = window.btoa(checkSum)
 
     const metadata = `filename ${encFilename},content-type ${encType},checksum ${encChecksum}`
-    console.log(metadata)
-    console.log(selectedFile.size)
 
     // Initiate upload
     const response = await fetch(
@@ -59,12 +57,9 @@ function App() {
       }
     )
 
-    console.log(response)
     if (response.status != 201) {
-      console.log('Initiate upload failed')
     }
     
-    console.log(response.headers.get('Location'))
     setUploadURL(response.headers.get('Location'))
 
     handleUpload(0, response.headers.get('Location'))
@@ -76,13 +71,11 @@ function App() {
       method: "HEAD"
     });
 
-    console.log(response.headers.get('Is-Completed'))
     if (response.headers.get('Is-Completed')) {
       return
     }
-    console.log(response.headers.get('Upload-Offset'))
     handleUpload(
-      response.headers.get('Upload-Offset'), 
+      parseInt(response.headers.get('Upload-Offset'), 10),
       uploadURL
     )
   }
@@ -91,8 +84,6 @@ function App() {
     if (!selectedFile) return
     
     // setUploading(true)
-    // console.log(uploadUrl)
-    console.log('start ', startBuf)
     let isCompleted = false
 
     // Upload chunk
@@ -100,7 +91,9 @@ function App() {
 
     let currentProgress = Math.round(startBuf/selectedFile.size)
     while (!isCompleted) {
-      const chunk = selectedFile.slice(startBuf, startBuf + chunkSize)
+      let end = startBuf + chunkSize
+      const chunk = selectedFile.slice(startBuf, end)
+
 
       try {
         const response = await fetch(
@@ -113,9 +106,7 @@ function App() {
           body: chunk
         });
         startBuf = parseInt(response.headers.get('upload-offset'))
-        console.log('chunk ', response.status)
         currentProgress = Math.round((startBuf / selectedFile.size) * 100)
-        console.log(currentProgress)
         setProgress(currentProgress)
         if (startBuf == selectedFile.size) {
           break
@@ -123,7 +114,6 @@ function App() {
       } catch (error) {
         if (!navigator.online) {
           setUploading(false)
-          console.log('Network unavailable')
           break
         }
       }
