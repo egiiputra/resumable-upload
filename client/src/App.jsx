@@ -68,8 +68,9 @@ function App() {
   const resumeUpload = async () => {
     const response = await fetch(
       `${host_url}${uploadURL}`, {
-      method: "HEAD"
-    });
+        method: "HEAD",
+      }
+    );
 
     if (response.headers.get('Is-Completed')) {
       return
@@ -98,13 +99,14 @@ function App() {
       try {
         const response = await fetch(
           `${host_url}${uploadUrl}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Length": chunk.length,
-            "Content-Type": "application/offset+octet-stream"
-          },
-          body: chunk
-        });
+            method: "PATCH",
+            headers: {
+              "Content-Length": chunk.length,
+              "Content-Type": "application/offset+octet-stream"
+            },
+            body: chunk,
+          }
+        );
         startBuf = parseInt(response.headers.get('upload-offset'))
         currentProgress = Math.round((startBuf / selectedFile.size) * 100)
         setProgress(currentProgress)

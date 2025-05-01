@@ -21,7 +21,7 @@ import {
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 
-const database = new DatabaseSync(path.join(process.cwd(), 'files.db'));
+const database = new DatabaseSync(path.join(process.cwd(), 'uploads', 'files.db'));
 
 // Execute SQL statements from strings.
 database.exec(`
@@ -89,6 +89,7 @@ export class FilesController {
     const id = randomUUID();
 
     const insert = database.prepare('INSERT INTO files VALUES (?, ?, ?, ?, ?, ?)')
+    console.log(fileMetadata)
 
     insert.run(
       id, 
@@ -104,45 +105,39 @@ export class FilesController {
   @Head(':id')
   getMetadata(@Param('id') id: string, @Res() res: Response) {
     // TODO: Retrieves the metadata of the file by ID. This API will be used to check the status and progress of the upload. Client can use this API to see how much of the file has been uploaded and where to resume the upload
-    const metadataPath = path.join(
-      process.cwd(),
-      'uploads',
-      `${id}.metadata.json`,
-    );
-    fs.readFile(metadataPath, 'utf8', (err, data) => {
-      if (err) {
-        res.status(404).send();
-        return;
-      }
 
-      const metadata = JSON.parse(data);
+    const tmp = database.prepare(`SELECT * FROM files WHERE uuid='${id}'`).all()
+    const result = tmp.map(row => Object.assign({}, row))
 
-      const headers: Record<string, string | number> = {
-        'Cache-Control': 'no-store',
-        'Upload-Offset': metadata.uploadedSize.toString(),
-      };
-      if (metadata.isDeferLength == '') {
-        headers['Upload-Length'] = metadata.totalSize;
-      }
+    console.log(result)
+    if (result.length == 0) {
+      res.status(404).send();
+      return;
+    }
+    console.log(result[0])
 
-      if (metadata.uploadedSize < metadata.totalSize) {
-        res.status(204).set(headers).send();
-        return;
-      }
+    const headers: Record<string, string | number> = {
+      'Cache-Control': 'no-store',
+      'Upload-Offset': result[0]['uploaded_size'].toString(),
+      'Upload-Length': result[0]['total_size'].toString()
+    };
 
+    if (result[0]['uploaded_size'] >= result[0]['total_size']) {
       const hash = createHash('md5');
 
-      const buffer = fs.readFileSync(
-        path.join(process.cwd(), 'uploads', metadata.filename),
+      hash.update(
+        fs.readFileSync(
+          path.join(process.cwd(), 'uploads', 'files', result[0]['filename'])
+        )
       );
-      hash.update(buffer);
-      if (metadata.checksum != hash.copy().digest('hex')) {
-        res.status(204).set(headers).send();
-        return;
+
+      if (result[0]['checksum'] == hash.copy().digest('hex')) {
+        headers['Upload-Status'] = 'success';
+      } else {
+        headers['Upload-Status'] = 'failed';
       }
-      headers['Is-Completed'] = 1;
-      res.status(204).set(headers).send();
-    });
+    }
+    res.status(204).set(headers).send();
   }
 
   @Patch(':id')
@@ -165,68 +160,62 @@ export class FilesController {
       return;
     }
 
-    const metadataPath = path.join(
-      process.cwd(),
-      'uploads',
-      `${id}.metadata.json`,
-    );
-    fs.readFile(metadataPath, 'utf-8', (err, data) => {
+    const tmp = database.prepare(`SELECT * FROM files WHERE uuid='${id}'`).all()
+    const result = tmp.map(row => Object.assign({}, row))
+
+    console.log(result)
+    if (result.length == 0) {
+      res.status(404).send({ message: 'Upload ID not found' });
+      return;
+    }
+    console.log(result[0])
+
+    const filePath = path.join(process.cwd(), 'uploads', 'files', result[0]['filename'])
+    fs.open(filePath, 'a', (err, fd) => {
       if (err) {
-        res.status(404).send({ message: 'Upload ID not found' });
+        res.status(500).send({ message: 'Open file error' });
         return;
       }
-      const metadata = JSON.parse(data);
-
-      fs.open(
-        path.join(process.cwd(), 'uploads', metadata.filename),
-        'a',
-        (err, fd) => {
+      fs.write(fd, buffer, 0, buffer.length, (err, bytesWritten, buff) => {
+        if (err) {
+          res.status(500).send({ message: 'Write file error' });
+          return;
+        }
+        result[0]['uploaded_size'] += bytesWritten;
+      
+        fs.close(fd, (err) => {
           if (err) {
-            res.status(500).send({ message: 'Open file error' });
+            res.status(500).send({ message: 'Close file error' });
             return;
           }
-          fs.write(fd, buffer, 0, buffer.length, (err, bytesWritten, buff) => {
-            if (err) {
-              res.status(500).send({ message: 'Write file error' });
-              return;
-            }
-            metadata.uploadedSize += bytesWritten;
-            fs.writeFileSync(metadataPath, JSON.stringify(metadata));
-            fs.close(fd, (err) => {
-              if (err) {
-                res.status(500).send({ message: 'Close file error' });
-                return;
-              }
-              res
-                .status(204)
-                .set({ 'Upload-Offset': metadata.uploadedSize })
-                .send();
-              return;
-            });
-          });
-        },
-      );
-    });
+          database.exec(`UPDATE files SET uploaded_size=${result[0]['uploaded_size']} WHERE uuid='${id}'`)
+          // console.log(result[0]['uploaded_size'])
+          res
+            .status(204)
+            .set({ 'Upload-Offset': result[0]['uploaded_size'] })
+            .send();
+          
+          return;
+        });
+      });
+    })
   }
 
   @Delete(':id')
   cancelUpload(@Param('id') id: string, @Res() res: Response) {
-    try {
-      const metadataPath = path.join(
-        process.cwd(),
-        'uploads',
-        `${id}.metadata.json`,
-      );
-      const metadata = JSON.parse(
-        fs.readFileSync(metadataPath, { encoding: 'utf-8' }),
-      );
-      fs.rmSync(path.join(process.cwd(), 'uploads', metadata.filename));
-      fs.rmSync(metadataPath);
+    const result = database.prepare(`SELECT filename FROM files WHERE uuid='${id}'`)
+      .all()
+      .map(row => Object.assign({}, row))
 
-      res.status(204).send();
-    } catch {
-      res.status(400).send({ message: 'Upload ID not found' });
+    if (result.length == 0) {
+      res.status(404).send({ message: 'Upload ID not found' });
+      return;
     }
+    fs.rm(path.join(process.cwd(), 'uploads', 'files', result[0]['filename']), { force: true }, (err) => {})
+
+    database.exec(`DELETE FROM files WHERE uuid='${id}'`)
+
+    res.status(204).send();
   }
 
   @Options()

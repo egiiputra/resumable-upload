@@ -43,6 +43,9 @@ async function bootstrap() {
   try {
     mkdirSync(path.join(process.cwd(), 'uploads'));
   } catch {}
+  try {
+    mkdirSync(path.join(process.cwd(), 'uploads', 'files'));
+  } catch {}
 
   await app.listen(process.env.PORT ?? 3000);
 }
