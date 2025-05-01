@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import {
   Controller,
+  Get,
   Post,
   Head,
   Patch,
@@ -17,6 +18,7 @@ import {
   RawBodyRequest,
   Headers,
   Res,
+  StreamableFile,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -43,6 +45,33 @@ export class FilesController {
     private readonly filesService: FilesService,
     private configService: ConfigService,
   ) {}
+
+  @Get(':id')
+  getFileMetadata(@Param('id') id: string, @Res() res: Response) {
+    const tmp = database.prepare(`SELECT * FROM files WHERE uuid='${id}'`).all()
+    const result = tmp.map(row => Object.assign({}, row))
+
+    if (result.length == 0) {
+      res.status(404).send();
+      return;
+    }
+
+    res.status(200).json(result[0])
+  }
+
+  @Get(':id/download')
+  getFile(@Param('id') id: string, @Res() res: Response) {
+    const tmp = database.prepare(`SELECT * FROM files WHERE uuid='${id}'`).all()
+    const result = tmp.map(row => Object.assign({}, row))
+
+    if (result.length == 0) {
+      res.status(404).send();
+      return;
+    }
+
+    res.download(path.join(process.cwd(), 'uploads', 'files', result[0]['filename']))
+  }
+
 
   @Post()
   createUpload(
