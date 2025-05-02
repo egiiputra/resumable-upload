@@ -22,6 +22,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { ApiOperation, ApiCreatedResponse, ApiBadRequestResponse, ApiPayloadTooLargeResponse, ApiOkResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiUnsupportedMediaTypeResponse, ApiInternalServerErrorResponse } from '@nestjs/swagger';
 
 const database = new DatabaseSync(path.join(process.cwd(), 'uploads', 'files.db'));
 
@@ -47,6 +48,9 @@ export class FilesController {
   ) {}
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get file\'s metadata' })
+  @ApiNotFoundResponse({ description: 'File not found' })
+  @ApiOkResponse({ description: 'Get file\'s metadata success' })
   getFileMetadata(@Param('id') id: string, @Res() res: Response) {
     const tmp = database.prepare(`SELECT * FROM files WHERE uuid='${id}'`).all()
     const result = tmp.map(row => Object.assign({}, row))
@@ -60,6 +64,9 @@ export class FilesController {
   }
 
   @Get(':id/download')
+  @ApiOperation({ summary: 'Download file' })
+  @ApiNotFoundResponse({ description: 'file not found'})
+  @ApiOkResponse({ description: 'file found' })
   getFile(@Param('id') id: string, @Res() res: Response) {
     const tmp = database.prepare(`SELECT * FROM files WHERE uuid='${id}'`).all()
     const result = tmp.map(row => Object.assign({}, row))
@@ -74,11 +81,14 @@ export class FilesController {
 
 
   @Post()
+  @ApiOperation({ summary: 'Initiates a new file upload. The client will send the metadata of the file to be uploaded, and the server will respond with the location where to upload the file' })
+  @ApiCreatedResponse({ description: 'Initiates file upload success' })
+  @ApiBadRequestResponse({ description: 'Invalid request headers' })
+  @ApiPayloadTooLargeResponse({ description: 'Uploaded file too large' })
   createUpload(
     @Headers() headers: Record<string, string>,
     @Res() res: Response,
   ) {
-    // TODO: Initiates a new file upload. The client will send the metadata of the file to be uploaded, and the server will respond with the location where to upload the file
     const uploadDeferLength: string = headers['upload-defer-length'] ?? '';
     if (uploadDeferLength != '' && uploadDeferLength != '1') {
       res.status(400).json({
@@ -132,6 +142,9 @@ export class FilesController {
   }
 
   @Head(':id')
+  @ApiOperation({ summary: 'Get file upload progress' })
+  @ApiNoContentResponse({ description: 'file\'s upload progress fetch successfully' })
+  @ApiNotFoundResponse({ description: 'file not found' })
   getMetadata(@Param('id') id: string, @Res() res: Response) {
     // TODO: Retrieves the metadata of the file by ID. This API will be used to check the status and progress of the upload. Client can use this API to see how much of the file has been uploaded and where to resume the upload
 
@@ -170,6 +183,12 @@ export class FilesController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Upload file\'s chunk' })
+  @ApiUnsupportedMediaTypeResponse({ description: 'Content-type header not supported' })
+  @ApiBadRequestResponse({ description: 'Request body is empty' })
+  @ApiNotFoundResponse({ description: 'File not found' })
+  @ApiInternalServerErrorResponse({ description: 'server error' })
+  @ApiNoContentResponse({ description: 'Upload chunk success' })
   uploadChunk(
     @Param('id') id: string,
     @Req() req: RawBodyRequest<Request>,
@@ -231,6 +250,9 @@ export class FilesController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete/cancel file '})
+  @ApiNotFoundResponse({ description: 'File not found' })
+  @ApiNoContentResponse({ description: 'Delete file success' })
   cancelUpload(@Param('id') id: string, @Res() res: Response) {
     const result = database.prepare(`SELECT filename FROM files WHERE uuid='${id}'`)
       .all()
@@ -248,6 +270,7 @@ export class FilesController {
   }
 
   @Options()
+  @ApiOperation({ summary: 'Get Allowed HTTP method' })
   getMethodOptions(@Res() res: Response) {
     // TODO:Retrieves the server’s capabilities. The client can query the server to determine which extensions are supported by the server
     res.status(204).set({ Allow: 'OPTIONS, HEAD, POST, PATCH' }).send();
