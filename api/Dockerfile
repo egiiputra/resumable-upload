@@ -36,10 +36,11 @@ COPY --from=build /usr/src/app/package*.json .
 COPY --from=build /usr/src/app/pnpm-lock.yaml .
 
 COPY --from=build /usr/src/app/dist /usr/src/app/dist
-# Expose the application port
-EXPOSE 3000
 
 RUN pnpm install --prod
 
+RUN mkdir -p /usr/src/app/uploads/files
+# Expose the application port
+EXPOSE 3000
 # Command to run the application
 CMD ["node", "dist/main"]
