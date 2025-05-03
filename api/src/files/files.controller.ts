@@ -18,13 +18,25 @@ import {
   RawBodyRequest,
   Headers,
   Res,
-  StreamableFile,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { ApiOperation, ApiCreatedResponse, ApiBadRequestResponse, ApiPayloadTooLargeResponse, ApiOkResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiUnsupportedMediaTypeResponse, ApiInternalServerErrorResponse } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiCreatedResponse,
+  ApiBadRequestResponse,
+  ApiPayloadTooLargeResponse,
+  ApiOkResponse,
+  ApiNoContentResponse,
+  ApiNotFoundResponse,
+  ApiUnsupportedMediaTypeResponse,
+  ApiInternalServerErrorResponse,
+  ApiHeaders,
+} from '@nestjs/swagger';
 
-const database = new DatabaseSync(path.join(process.cwd(), 'uploads', 'files.db'));
+const database = new DatabaseSync(
+  path.join(process.cwd(), 'uploads', 'files.db'),
+);
 
 // Execute SQL statements from strings.
 database.exec(`
@@ -48,40 +60,59 @@ export class FilesController {
   ) {}
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get file\'s metadata' })
+  @ApiOperation({ summary: "Get file's metadata" })
   @ApiNotFoundResponse({ description: 'File not found' })
-  @ApiOkResponse({ description: 'Get file\'s metadata success' })
+  @ApiOkResponse({ description: "Get file's metadata success" })
   getFileMetadata(@Param('id') id: string, @Res() res: Response) {
-    const tmp = database.prepare(`SELECT * FROM files WHERE uuid='${id}'`).all()
-    const result = tmp.map(row => Object.assign({}, row))
+    const tmp = database
+      .prepare(`SELECT * FROM files WHERE uuid='${id}'`)
+      .all();
+    const result = tmp.map((row) => Object.assign({}, row));
 
     if (result.length == 0) {
       res.status(404).send();
       return;
     }
 
-    res.status(200).json(result[0])
+    res.status(200).json(result[0]);
   }
 
   @Get(':id/download')
   @ApiOperation({ summary: 'Download file' })
-  @ApiNotFoundResponse({ description: 'file not found'})
+  @ApiNotFoundResponse({ description: 'file not found' })
   @ApiOkResponse({ description: 'file found' })
   getFile(@Param('id') id: string, @Res() res: Response) {
-    const tmp = database.prepare(`SELECT * FROM files WHERE uuid='${id}'`).all()
-    const result = tmp.map(row => Object.assign({}, row))
+    const tmp = database
+      .prepare(`SELECT * FROM files WHERE uuid='${id}'`)
+      .all();
+    const result = tmp.map((row) => Object.assign({}, row));
 
     if (result.length == 0) {
       res.status(404).send();
       return;
     }
 
-    res.download(path.join(process.cwd(), 'uploads', 'files', result[0]['filename']))
+    res.download(
+      path.join(process.cwd(), 'uploads', 'files', result[0]['filename']),
+    );
   }
 
-
   @Post()
-  @ApiOperation({ summary: 'Initiates a new file upload. The client will send the metadata of the file to be uploaded, and the server will respond with the location where to upload the file' })
+  @ApiHeaders([
+    {
+      name: 'Upload-Metadata',
+      description:
+        'File metadata that consist of filename, content-type, checksum',
+    },
+    {
+      name: 'Upload-Length',
+      description: 'Total size of file',
+    },
+  ])
+  @ApiOperation({
+    summary:
+      'Initiates a new file upload. The client will send the metadata of the file to be uploaded, and the server will respond with the location where to upload the file',
+  })
   @ApiCreatedResponse({ description: 'Initiates file upload success' })
   @ApiBadRequestResponse({ description: 'Invalid request headers' })
   @ApiPayloadTooLargeResponse({ description: 'Uploaded file too large' })
@@ -127,41 +158,50 @@ export class FilesController {
 
     const id = randomUUID();
 
-    const insert = database.prepare('INSERT INTO files VALUES (?, ?, ?, ?, ?, ?)')
-    console.log(fileMetadata)
+    const insert = database.prepare(
+      'INSERT INTO files VALUES (?, ?, ?, ?, ?, ?)',
+    );
+    console.log(fileMetadata);
 
     insert.run(
-      id, 
+      id,
       fileMetadata['filename'],
       fileMetadata['content-type'],
       fileMetadata['checksum'],
       fileMetadata['totalSize'],
-      fileMetadata['uploadedSize']
-    )
-    res.status(201).set({ Location: `/v1/files/${id}`}).send();
+      fileMetadata['uploadedSize'],
+    );
+    res
+      .status(201)
+      .set({ Location: `/v1/files/${id}` })
+      .send();
   }
 
   @Head(':id')
   @ApiOperation({ summary: 'Get file upload progress' })
-  @ApiNoContentResponse({ description: 'file\'s upload progress fetch successfully' })
+  @ApiNoContentResponse({
+    description: "file's upload progress fetch successfully",
+  })
   @ApiNotFoundResponse({ description: 'file not found' })
   getMetadata(@Param('id') id: string, @Res() res: Response) {
     // TODO: Retrieves the metadata of the file by ID. This API will be used to check the status and progress of the upload. Client can use this API to see how much of the file has been uploaded and where to resume the upload
 
-    const tmp = database.prepare(`SELECT * FROM files WHERE uuid='${id}'`).all()
-    const result = tmp.map(row => Object.assign({}, row))
+    const tmp = database
+      .prepare(`SELECT * FROM files WHERE uuid='${id}'`)
+      .all();
+    const result = tmp.map((row) => Object.assign({}, row));
 
-    console.log(result)
+    console.log(result);
     if (result.length == 0) {
       res.status(404).send();
       return;
     }
-    console.log(result[0])
+    console.log(result[0]);
 
     const headers: Record<string, string | number> = {
       'Cache-Control': 'no-store',
       'Upload-Offset': result[0]['uploaded_size'].toString(),
-      'Upload-Length': result[0]['total_size'].toString()
+      'Upload-Length': result[0]['total_size'].toString(),
     };
 
     if (result[0]['uploaded_size'] >= result[0]['total_size']) {
@@ -169,8 +209,8 @@ export class FilesController {
 
       hash.update(
         fs.readFileSync(
-          path.join(process.cwd(), 'uploads', 'files', result[0]['filename'])
-        )
+          path.join(process.cwd(), 'uploads', 'files', result[0]['filename']),
+        ),
       );
 
       if (result[0]['checksum'] == hash.copy().digest('hex')) {
@@ -183,8 +223,10 @@ export class FilesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Upload file\'s chunk' })
-  @ApiUnsupportedMediaTypeResponse({ description: 'Content-type header not supported' })
+  @ApiOperation({ summary: "Upload file's chunk" })
+  @ApiUnsupportedMediaTypeResponse({
+    description: 'Content-type header not supported',
+  })
   @ApiBadRequestResponse({ description: 'Request body is empty' })
   @ApiNotFoundResponse({ description: 'File not found' })
   @ApiInternalServerErrorResponse({ description: 'server error' })
@@ -208,17 +250,24 @@ export class FilesController {
       return;
     }
 
-    const tmp = database.prepare(`SELECT * FROM files WHERE uuid='${id}'`).all()
-    const result = tmp.map(row => Object.assign({}, row))
+    const tmp = database
+      .prepare(`SELECT * FROM files WHERE uuid='${id}'`)
+      .all();
+    const result = tmp.map((row) => Object.assign({}, row));
 
-    console.log(result)
+    console.log(result);
     if (result.length == 0) {
       res.status(404).send({ message: 'Upload ID not found' });
       return;
     }
-    console.log(result[0])
+    console.log(result[0]);
 
-    const filePath = path.join(process.cwd(), 'uploads', 'files', result[0]['filename'])
+    const filePath = path.join(
+      process.cwd(),
+      'uploads',
+      'files',
+      result[0]['filename'],
+    );
     fs.open(filePath, 'a', (err, fd) => {
       if (err) {
         res.status(500).send({ message: 'Open file error' });
@@ -230,41 +279,47 @@ export class FilesController {
           return;
         }
         result[0]['uploaded_size'] += bytesWritten;
-      
+
         fs.close(fd, (err) => {
           if (err) {
             res.status(500).send({ message: 'Close file error' });
             return;
           }
-          database.exec(`UPDATE files SET uploaded_size=${result[0]['uploaded_size']} WHERE uuid='${id}'`)
-          // console.log(result[0]['uploaded_size'])
+          database.exec(
+            `UPDATE files SET uploaded_size=${result[0]['uploaded_size']} WHERE uuid='${id}'`,
+          );
           res
             .status(204)
             .set({ 'Upload-Offset': result[0]['uploaded_size'] })
             .send();
-          
+
           return;
         });
       });
-    })
+    });
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete/cancel file '})
+  @ApiOperation({ summary: 'Delete/cancel file ' })
   @ApiNotFoundResponse({ description: 'File not found' })
   @ApiNoContentResponse({ description: 'Delete file success' })
   cancelUpload(@Param('id') id: string, @Res() res: Response) {
-    const result = database.prepare(`SELECT filename FROM files WHERE uuid='${id}'`)
+    const result = database
+      .prepare(`SELECT filename FROM files WHERE uuid='${id}'`)
       .all()
-      .map(row => Object.assign({}, row))
+      .map((row) => Object.assign({}, row));
 
     if (result.length == 0) {
       res.status(404).send({ message: 'Upload ID not found' });
       return;
     }
-    fs.rm(path.join(process.cwd(), 'uploads', 'files', result[0]['filename']), { force: true }, (err) => {})
+    fs.rm(
+      path.join(process.cwd(), 'uploads', 'files', result[0]['filename']),
+      { force: true },
+      (err) => {},
+    );
 
-    database.exec(`DELETE FROM files WHERE uuid='${id}'`)
+    database.exec(`DELETE FROM files WHERE uuid='${id}'`);
 
     res.status(204).send();
   }
@@ -272,7 +327,6 @@ export class FilesController {
   @Options()
   @ApiOperation({ summary: 'Get Allowed HTTP method' })
   getMethodOptions(@Res() res: Response) {
-    // TODO:Retrieves the server’s capabilities. The client can query the server to determine which extensions are supported by the server
     res.status(204).set({ Allow: 'OPTIONS, HEAD, POST, PATCH' }).send();
   }
 }
