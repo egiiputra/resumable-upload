@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react'
 import { Upload } from 'lucide-react'
 import '../App.css'
 import { calculateMD5 } from '../util.js'
+import { useNavigate } from 'react-router-dom'
 
 const host_url = `${import.meta.env.VITE_API_HOST}:${import.meta.env.VITE_API_PORT}`
 
 export default function UploadFile() {
+  const [uuid, setUuid] = useState('')
   const [selectedFile, setSelectedFile] = useState(null)
   const [progress, setProgress] = useState(0)
   const [uploading, setUploading] = useState(false)
   const [uploadURL, setUploadURL] = useState('')
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     // Only add the event listener if there's an active upload
@@ -28,6 +32,13 @@ export default function UploadFile() {
       };
     }
   }, [uploading]);
+
+  const handleRedirect = async () => {
+    console.log(uuid)
+    if (uuid.trim()) {
+      return navigate(`/files/${uuid}`)
+    }
+  }
 
   const handleFileChange = async (event) => {
     const file = event.target.files[0]
@@ -125,7 +136,22 @@ export default function UploadFile() {
   return (
     <div className='flex w-screen h-screen justify-center content-center'>
       <div className="sm:w-full lg:w-5/10 mx-auto p-6 bg-white rounded-lg shadow-lg">
-        <h2 className="text-xl font-bold mb-4 text-gray-800">File Upload</h2>
+        <h2 className="text-xl font-bold mb-4 text-gray-800">Get uploaded file</h2>
+        <input 
+          className="w-full px-4 py-2 mb-2 rounded-md border border-black text-black" 
+          type="text" 
+          placeholder="Insert file UUID"
+          value={uuid}
+          onChange={(e) => setUuid(e.target.value)}
+        />
+        <button onClick={handleRedirect}>
+          Get file
+        </button>
+
+        <hr className="my-4 border border-gray-600"/>
+        {/* <h4 className="text-xl font-bold my-4 text-gray-800"> - OR - </h4> */}
+        
+        <h2 className="text-xl font-bold mb-4 text-gray-800">Upload File</h2>
         
         <div className="mb-4">
           <label className="block mb-2 text-sm font-medium text-gray-700">
@@ -178,5 +204,3 @@ export default function UploadFile() {
     </div>
   )
 }
-
-// export default App
