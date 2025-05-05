@@ -161,7 +161,6 @@ export class FilesController {
     const insert = database.prepare(
       'INSERT INTO files VALUES (?, ?, ?, ?, ?, ?)',
     );
-    console.log(fileMetadata);
 
     insert.run(
       id,
@@ -191,12 +190,10 @@ export class FilesController {
       .all();
     const result = tmp.map((row) => Object.assign({}, row));
 
-    console.log(result);
     if (result.length == 0) {
       res.status(404).send();
       return;
     }
-    console.log(result[0]);
 
     const headers: Record<string, string | number> = {
       'Cache-Control': 'no-store',
@@ -255,12 +252,10 @@ export class FilesController {
       .all();
     const result = tmp.map((row) => Object.assign({}, row));
 
-    console.log(result);
     if (result.length == 0) {
       res.status(404).send({ message: 'Upload ID not found' });
       return;
     }
-    console.log(result[0]);
 
     const filePath = path.join(
       process.cwd(),
