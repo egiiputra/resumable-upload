@@ -1,0 +1,19 @@
+services:
+  client:
+    image: resumable-upload-client:v1
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_HOST=http://localhost
+      - VITE_API_PORT=3000
+    depends_on:
+      - api
+  api:
+    image: ghcr.io/egiiputra/resumable-upload-api:v1
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/usr/src/app/uploads
+    environment:
+      - MAX_SIZE_UPLOAD=1000 # in MB (Mega Bytes)
+      - CLIENT_HOST=http://localhost
