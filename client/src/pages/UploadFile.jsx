@@ -13,6 +13,8 @@ export default function UploadFile() {
   const [uploading, setUploading] = useState(false)
   const [uploadURL, setUploadURL] = useState('')
 
+  // const url = 'http://localhost:3000/v1/files/jfkldjsljfld'
+
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function UploadFile() {
     let isCompleted = false
 
     // Upload chunk
-    const chunkSize = 1*1024*1024 // 5MB
+    const chunkSize = 1*1024*1024
 
     let currentProgress = Math.round(startBuf/selectedFile.size)
     while (!isCompleted) {
@@ -135,7 +137,7 @@ export default function UploadFile() {
 
   return (
     <div className='flex w-screen h-screen justify-center content-center'>
-      <div className="sm:w-full lg:w-5/10 mx-auto p-6 bg-white rounded-lg shadow-lg">
+      <div className="sm:w-full lg:w-5/10 mx-auto p-6 bg-white rounded-lg">
         <h2 className="text-xl font-bold mb-4 text-gray-800">Get uploaded file</h2>
         <input 
           className="w-full px-4 py-2 mb-2 rounded-md border border-black text-black" 
@@ -199,6 +201,15 @@ export default function UploadFile() {
             
             <p className="text-xs text-gray-500 mt-1">{progress}% uploaded</p>
           </div>
+        )}
+
+        {(!uploading && progress==100) && (
+          <p className="text-sm text-gray-600 mb-1">
+            Your file can be accessed at&nbsp;
+            <a href={uploadURL.split('/').slice(-2).join('/')} className='text-blue-600 underline'>
+              {uploadURL.split('/').slice(-2).join('/')}
+            </a>
+          </p>
         )}
       </div>
     </div>
