@@ -9,6 +9,8 @@ import { ConfigModule } from '@nestjs/config';
 @Module({
   controllers: [AppController, FilesController, FormUploadController],
   providers: [AppService, FilesService],
-  imports: [ConfigModule.forRoot()],
+  imports: [ConfigModule.forRoot({
+    cache: true
+  })],
 })
 export class AppModule {}
