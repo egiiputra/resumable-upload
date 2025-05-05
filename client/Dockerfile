@@ -25,6 +25,8 @@ FROM nginx:1.28-alpine3.21-slim AS prod
 
 # Set the working directory inside the container
 WORKDIR /usr/share/nginx/html
+# Copy nginx config to image
+COPY --from=build /usr/src/app/nginx.conf /etc/nginx/nginx.d/default
 
 COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 
