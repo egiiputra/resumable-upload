@@ -7,6 +7,8 @@ import { mkdirSync } from 'fs';
 
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { VersioningType } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { env } from 'process';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -22,9 +24,11 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
 
+  ConfigModule.forRoot()
+
   // Enable CORS
   app.enableCors({
-    origin: 'http://localhost:5173', // Your frontend URL
+    origin: env.CLIENT_HOST, // Your frontend URL
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     exposedHeaders: '*',
