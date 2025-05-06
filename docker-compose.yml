@@ -1,6 +1,6 @@
 services:
   client:
-    image: resumable-upload-client:v1
+    image: ghcr.io/egiiputra/resumable-upload-client:v1
     ports:
       - "80:80"
     environment:
