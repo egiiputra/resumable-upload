@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { Buffer } from 'buffer';
 
+import { FileMetadata } from './filemetadata.interface';
+
 @Injectable()
 export class FilesService {
-  parseMetadata(metadata: string): Record<string, string | number> {
-    const metadataObj = {};
+  parseMetadata(metadata: string): FileMetadata {
+    const metadataObj = {} as FileMetadata;
     const data = metadata.split(',');
     for (const kv of data) {
       if (kv == '') {

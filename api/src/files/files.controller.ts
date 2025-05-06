@@ -34,6 +34,10 @@ import {
   ApiHeaders,
 } from '@nestjs/swagger';
 
+import { nanoid } from 'nanoid';
+
+import { FileMetadata } from './filemetadata.interface';
+
 const database = new DatabaseSync(
   path.join(process.cwd(), 'uploads', 'files.db'),
 );
@@ -128,33 +132,35 @@ export class FilesController {
       return;
     }
 
-    const fileMetadata = this.filesService.parseMetadata(
+    const fileMetadata: FileMetadata = this.filesService.parseMetadata(
       headers['upload-metadata'],
     );
+    const tmp = fileMetadata.filename.split('.')
+
+    tmp[tmp.length - 2] += `_${nanoid(10)}`
     fileMetadata.uploadedSize = 0;
 
-    fileMetadata.isDeferLength = uploadDeferLength == '1' ? '1' : '';
-    if (fileMetadata.isDeferLength == '') {
-      const totalSize = parseInt(headers['upload-length']);
-      if (Number.isNaN(totalSize)) {
-        res.status(400).json({
-          message: 'invalid Upload-Length header',
-        });
-        return;
-      }
+    fileMetadata.filename = tmp.join('.')
 
-      const maxUpload =
-        (this.configService.get<number>('MAX_SIZE_UPLOAD') ?? 1000) *
-        1024 *
-        1024;
-      if (totalSize > maxUpload) {
-        res.status(413).json({
-          message: 'upload length exceeds the maximum size',
-        });
-        return;
-      }
-      fileMetadata.totalSize = totalSize;
+    const totalSize = parseInt(headers['upload-length']);
+    if (Number.isNaN(totalSize)) {
+      res.status(400).json({
+        message: 'invalid Upload-Length header',
+      });
+      return;
     }
+
+    const maxUpload =
+      (this.configService.get<number>('MAX_SIZE_UPLOAD') ?? 1000) *
+      1024 *
+      1024;
+    if (totalSize > maxUpload) {
+      res.status(413).json({
+        message: 'upload length exceeds the maximum size',
+      });
+      return;
+    }
+    fileMetadata.totalSize = totalSize;
 
     const id = randomUUID();
 
