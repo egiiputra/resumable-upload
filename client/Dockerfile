@@ -21,13 +21,12 @@ COPY . .
 RUN pnpm run build
 
 # FOR PRODUCTION
-FROM nginx:1.28-alpine3.21-slim AS prod
+FROM node:22.14-slim AS prod
 
-# Set the working directory inside the container
-WORKDIR /usr/share/nginx/html
-# Copy nginx config to image
-COPY --from=build /usr/src/app/nginx.conf /etc/nginx/nginx.d/default
+WORKDIR /usr/src/app
 
-COPY --from=build /usr/src/app/dist /usr/share/nginx/html
+RUN npm i -g serve
 
-EXPOSE 80
+COPY --from=build /usr/src/app/dist ./dist
+
+CMD ["serve", "-s", "dist", "-l", "80"]
